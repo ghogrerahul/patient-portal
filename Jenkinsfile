@@ -27,6 +27,11 @@ pipeline {
         sh 'npm run lint'
       }
     }
+    stage('Test') {
+      steps {
+        sh 'npm test'
+      }
+    }
     stage('DockerBuild Snapshot') {
       steps {
         script {
