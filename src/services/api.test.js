@@ -18,12 +18,20 @@ vi.mock('axios', () => ({
 }))
 
 describe('api service', () => {
+  let requestSuccessHandler
+  let responseSuccessHandler
+  let responseErrorHandler
+
   beforeEach(() => {
     mockClient.get.mockReset()
     mockClient.post.mockReset()
     mockClient.put.mockReset()
     mockClient.delete.mockReset()
+    mockClient.interceptors.request.use.mockReset()
+    mockClient.interceptors.response.use.mockReset()
     localStorage.clear()
+    vi.resetModules()
+    vi.clearAllMocks()
   })
 
   it('calls patient endpoints with expected arguments', async () => {
@@ -60,5 +68,31 @@ describe('api service', () => {
     expect(mockClient.put).toHaveBeenCalledWith('/appointments/a-1', { status: 'confirmed' })
     expect(mockClient.post).toHaveBeenCalledWith('/appointments/a-1/cancel', { reason: 'rescheduled' })
     expect(mockClient.get).toHaveBeenCalledWith('/appointments/patient/p-1/all')
+  })
+
+  it('adds bearer token using request interceptor when token exists', async () => {
+    localStorage.setItem('token', 'abc123')
+    await import('./api')
+
+    requestSuccessHandler = mockClient.interceptors.request.use.mock.calls[0][0]
+    const result = requestSuccessHandler({ headers: {} })
+
+    expect(result.headers.Authorization).toBe('Bearer abc123')
+  })
+
+  it('redirects to login on 401 response', async () => {
+    localStorage.setItem('token', 'abc123')
+    await import('./api')
+
+    responseSuccessHandler = mockClient.interceptors.response.use.mock.calls[0][0]
+    responseErrorHandler = mockClient.interceptors.response.use.mock.calls[0][1]
+
+    expect(responseSuccessHandler({ data: { ok: true } })).toEqual({ ok: true })
+
+    await expect(
+      responseErrorHandler({ response: { status: 401 } })
+    ).rejects.toMatchObject({ response: { status: 401 } })
+
+    expect(localStorage.getItem('token')).toBeNull()
   })
 })

@@ -9,6 +9,18 @@ const apiClient = axios.create({
   }
 })
 
+const redirectToLogin = () => {
+  if (typeof window === 'undefined' || !window.location) {
+    return
+  }
+
+  try {
+    window.location.href = '/login'
+  } catch {
+    // Navigation can fail in non-browser or mocked environments.
+  }
+}
+
 // Add token to requests
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
@@ -24,7 +36,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      redirectToLogin()
     }
     throw error
   }
