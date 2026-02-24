@@ -21,10 +21,10 @@ pipeline {
     stage('Scan Docker Image (Trivy)') {
       steps {
         sh '''
-        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+        docker run --rm -v $PWD:/work -v /var/run/docker.sock:/var/run/docker.sock \
           aquasec/trivy:latest image \
           --format json \
-          --output trivy-image-report.json \
+          --output /work/trivy-image-report.json \
           --severity HIGH,CRITICAL \
           ${ECR_REPO}:${IMAGE_TAG} || true
         '''
@@ -59,6 +59,9 @@ pipeline {
           CLUSTER=${ECS_CLUSTER}
           SERVICE=${ECS_SERVICE}
           aws ecs update-service --cluster ${CLUSTER} --service ${SERVICE} --force-new-deployment --region ${AWS_REGION}
+          aws ecs wait services-stable --cluster ${CLUSTER} --services ${SERVICE} --region ${AWS_REGION} || \
+            (aws ecs describe-services --cluster ${CLUSTER} --services ${SERVICE} --region ${AWS_REGION} \
+              --query "services[0].events[0:10].message" --output text && exit 1)
           '''
         }
       }
