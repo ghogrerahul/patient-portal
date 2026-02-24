@@ -2,7 +2,8 @@ pipeline {
   agent any
   environment {
     SONAR_HOST_URL = 'https://sonarcloud.io'
-    SONAR_PROJECT_KEY = 'patient-portal'
+    SONAR_PROJECT_KEY = 'ghogrerahul_patient-portal'
+    SONAR_ORGANIZATION = 'ghogrerahul'
   }
 
   stages {
@@ -36,6 +37,7 @@ pipeline {
             -v "$PWD:/usr/src" \
             sonarsource/sonar-scanner-cli:latest \
             -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+            -Dsonar.organization=${SONAR_ORGANIZATION} \
             -Dsonar.sources=src
           '''
         }
