@@ -6,7 +6,8 @@ pipeline {
   }
   environment {
     AWS_REGION = 'us-east-1'
-    ECR_ACCOUNT = ''
+    ECR_ACCOUNT = '242416990744'
+    // repository name matches AWS ECR for portal
     ECR_REPO = 'patient-portal'
     IMAGE_TAG = "${env.BUILD_ID}-${env.GIT_COMMIT.substring(0,7)}"
     SONAR_HOST_URL = 'https://sonarcloud.io'

@@ -1,0 +1,86 @@
+pipeline {
+  agent any
+  environment {
+    SONAR_HOST_URL = 'https://sonarcloud.io'
+    SONAR_PROJECT_KEY = 'patient-portal'
+  }
+
+  stages {
+    stage('Checkout') { 
+      steps { checkout scm } 
+    }
+
+    stage('Install & Build') {
+      steps {
+        sh 'npm ci'
+        sh 'npm run lint || true'
+        sh 'npm run type-check || true'
+        sh 'npm run build'
+        archiveArtifacts artifacts: 'dist/**', allowEmptyArchive: true
+      }
+    }
+
+    stage('SonarQube Analysis') {
+      steps {
+        withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+          sh '''
+          npm install -g sonar-scanner
+          sonar-scanner \
+            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+            -Dsonar.sources=src \
+            -Dsonar.host.url=${SONAR_HOST_URL} \
+            -Dsonar.login=${SONAR_TOKEN} \
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+          '''
+        }
+      }
+    }
+
+    stage('Secret Scanning (Gitleaks)') {
+      steps {
+        sh '''
+        docker run --rm -v $PWD:/src zricethezav/gitleaks:latest detect \
+          -s /src \
+          --report-path /src/gitleaks-report.json \
+          --report-format json || true
+        '''
+      }
+    }
+
+    stage('SCA: Trivy Filesystem Scan') {
+      steps {
+        sh '''
+        docker run --rm -v $PWD:/src \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy:latest fs /src \
+          --format json \
+          --output /src/trivy-fs-report.json \
+          --severity HIGH,CRITICAL || true
+        '''
+      }
+    }
+
+    stage('Auto Commit & Push') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'git-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+          sh '''
+          git config user.email "jenkins@ci"
+          git config user.name "Jenkins CI"
+          git add . || true
+          git diff --quiet || \
+            (git commit -m "Automated changes from Jenkins build ${BUILD_ID}" && \
+             git push https://${GIT_USER}:${GIT_PASS}@${GIT_URL#*://} HEAD:${GIT_BRANCH})
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: '*report*.json,gitleaks-report.json', allowEmptyArchive: true
+    }
+    success { echo "✓ CI completed for patient-portal" }
+    failure { echo "✗ CI failed" }
+  }
+}
