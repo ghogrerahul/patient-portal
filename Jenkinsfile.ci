@@ -30,12 +30,13 @@ pipeline {
       steps {
         withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
           sh '''
-          npx sonar-scanner \
+          docker run --rm \
+            -e SONAR_HOST_URL=${SONAR_HOST_URL} \
+            -e SONAR_LOGIN=${SONAR_TOKEN} \
+            -v "$PWD:/usr/src" \
+            sonarsource/sonar-scanner-cli:latest \
             -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-            -Dsonar.sources=src \
-            -Dsonar.host.url=${SONAR_HOST_URL} \
-            -Dsonar.login=${SONAR_TOKEN} \
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.sources=src
           '''
         }
       }
