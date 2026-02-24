@@ -52,8 +52,10 @@ pipeline {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-dev']]) {
           sh '''
-          CLUSTER=${ECS_CLUSTER:-your-ecs-cluster}
-          SERVICE=${ECS_SERVICE:-patient-portal}
+          : "${ECS_CLUSTER:?ECS_CLUSTER is required}"
+          : "${ECS_SERVICE:?ECS_SERVICE is required}"
+          CLUSTER=${ECS_CLUSTER}
+          SERVICE=${ECS_SERVICE}
           aws ecs update-service --cluster ${CLUSTER} --service ${SERVICE} --force-new-deployment --region ${AWS_REGION}
           '''
         }
