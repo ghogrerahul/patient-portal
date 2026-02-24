@@ -34,7 +34,7 @@ pipeline {
 
     stage('Push to ECR') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'aws-dev', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-dev']]) {
           sh '''
           aws configure set region ${AWS_REGION}
           ACCOUNT=${ECR_ACCOUNT}
@@ -50,7 +50,7 @@ pipeline {
 
     stage('Deploy (ECS / S3)') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'aws-dev', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-dev']]) {
           sh '''
           CLUSTER=${ECS_CLUSTER:-your-ecs-cluster}
           SERVICE=${ECS_SERVICE:-patient-portal}
