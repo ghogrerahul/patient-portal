@@ -70,6 +70,7 @@ pipeline {
     }
 
     stage('Auto Commit & Push') {
+      when { expression { false } }
       steps {
         withCredentials([usernamePassword(credentialsId: 'git-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
           sh '''
